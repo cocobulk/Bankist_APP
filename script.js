@@ -61,26 +61,6 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
-// Display the banking transactions
-const displayMovements = function (movements) {
-  containerMovements.innerHTML = '';
-
-  movements.forEach(function (mov, i) {
-    const type = mov > 0 ? 'deposit' : 'withdrawal';
-
-    const html = `
-      <div class="movements__row">
-        <div class="movements__type movements__type--${type}">${
-      i + 1
-    } ${type}</div>
-        <div class="movements__value">${mov}</div>
-      </div>
-    `;
-    containerMovements.insertAdjacentHTML('afterbegin', html);
-  });
-};
-displayMovements(account1.movements);
-
 // Create Username
 const createUsernames = function (accounts) {
   accounts.forEach(function (acc) {
@@ -93,15 +73,115 @@ const createUsernames = function (accounts) {
 };
 createUsernames(accounts);
 
-// Calculing and Displaying Balance
-const calcPrintBalance = function (movements) {
-  const balance = movements.reduce(function (acc, cur) {
-    return acc + cur;
-  }, 0);
-  labelBalance.textContent = `${balance} €`;
-};
-calcPrintBalance(account1.movements);
+// Display the banking transactions
+const displayMovements = function (movements) {
+  containerMovements.innerHTML = '';
 
+  movements.forEach(function (mov, i) {
+    const type = mov > 0 ? 'deposit' : 'withdrawal';
+
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${type}">${
+      i + 1
+    } ${type}</div>
+        <div class="movements__value">${mov} € </div>
+      </div>
+    `;
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
+
+// Calculing and Displaying Balance
+const calcDisplayBalance = function (account) {
+  account.balance = account.movements.reduce((acc, mov) => acc + mov, 0);
+  labelBalance.textContent = `${account.balance} €`;
+};
+
+// Calculing and Displaying Summary
+const calcDisplaySummary = function (account) {
+  // IN
+  const incomes = account.movements
+    .filter(mov => mov > 0)
+    .reduce((acc, mov) => acc + mov, 0);
+  labelSumIn.textContent = `${incomes}€`;
+
+  // OUT
+  const out = account.movements
+    .filter(mov => mov < 0)
+    .reduce((acc, mov) => acc + mov, 0);
+  labelSumOut.textContent = `${Math.abs(out)}€`;
+
+  // INTEREST
+  const interest = account.movements
+    .filter(mov => mov > 0)
+    .map(deposit => (deposit * account.interestRate) / 100)
+    .filter(interest => interest >= 1)
+    .reduce((acc, interest) => acc + interest, 0);
+  labelSumInterest.textContent = `${interest}€`;
+};
+
+const updateUI = function (account) {
+  // Display movements
+  displayMovements(currentAccount.movements);
+
+  // Display and calculate the balance
+  calcDisplayBalance(currentAccount);
+
+  // Display summary
+  calcDisplaySummary(currentAccount);
+};
+
+// LOGIN feature
+let currentAccount;
+
+btnLogin.addEventListener('click', function (e) {
+  // Prevent form from submitting
+  e.preventDefault();
+
+  currentAccount = accounts.find(
+    account => account.username === inputLoginUsername.value
+  );
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    // Display UI and welcome message
+    labelWelcome.textContent = `Welcome back, ${
+      currentAccount.owner.split(' ')[0]
+    }`;
+    containerApp.style.opacity = 100;
+
+    // Clear input fields
+    inputLoginUsername.value = inputLoginPin.value = '';
+    inputLoginPin.blur();
+
+    // Update UI
+    updateUI(currentAccount);
+  }
+});
+
+// Transfer feature
+btnTransfer.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const amount = Number(inputTransferAmount.value);
+  const receiverAcc = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+  inputTransferAmount.value = inputTransferTo.value = '';
+
+  if (
+    amount > 0 &&
+    receiverAcc &&
+    amount <= currentAccount.balance &&
+    receiverAcc.username !== currentAccount.username
+  ) {
+    // Doing the transfer
+    currentAccount.movements.push(-amount);
+    receiverAcc.movements.push(amount);
+
+    // Update the UI
+    updateUI(currentAccount);
+  }
+});
 
 // LECTURES
 /*
@@ -130,9 +210,39 @@ console.log(max);
 */
 
 ///////////////////////////////////////
-// Coding Challenge #2
+// Coding Challenge #3
 
 /* 
+Rewrite the 'calcAverageHumanAge' function from the previous challenge, but this time as an arrow function, and using chaining!
+
+TEST DATA 1: [5, 2, 4, 1, 15, 8, 3]
+TEST DATA 2: [16, 6, 10, 5, 6, 1, 4]
+
+GOOD LUCK 😀
+
+
+
+const calcAverageHumanAge = function (ages) {
+  const averageHumanAge =
+    ages
+      .map(dogAge => (dogAge <= 2 ? 2 * dogAge : 16 + dogAge * 4))
+      .filter(age => age >= 18)
+      .reduce((acc, age, i, arr) => acc + age / arr.length, 0);
+  console.log(averageHumanAge);
+};
+
+const ages1 = [5, 2, 4, 1, 15, 8, 3];
+const ages2 = [16, 6, 10, 5, 6, 1, 4];
+
+console.log('--- Test 1 ---');
+calcAverageHumanAge(ages1);
+console.log('--- Test 2 ---');
+calcAverageHumanAge(ages2);
+
+///////////////////////////////////////
+// Coding Challenge #2
+
+
 Let's go back to Julia and Kate's study about dogs. This time, they want to convert dog ages to human ages and calculate the average age of the dogs in their study.
 
 Create a function 'calcAverageHumanAge', which accepts an arrays of dog's ages ('ages'), and does the following things in order:
@@ -163,9 +273,9 @@ const calcAverageHumanAge = function (ages) {
   });
   // 3.
   const averageHumanAge =
-    dogsUnder18.reduce(function (acc, age) {
-      return acc + age;
-    }, 0) / dogsUnder18.length;
+    dogsUnder18.reduce(function (acc, age, i , arr) {
+      return acc + age / arr.length;
+    }, 0);
   console.log(averageHumanAge);
 };
 
@@ -176,9 +286,6 @@ console.log('--- Test 1 ---');
 calcAverageHumanAge(ages1);
 console.log('--- Test 2 ---');
 calcAverageHumanAge(ages2);
-
-*/
-
 
 ///////////////////////////////////////
 // Coding Challenge #1
